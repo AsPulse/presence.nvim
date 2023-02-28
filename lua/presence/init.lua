@@ -780,20 +780,8 @@ function Presence:get_buttons(buffer, parent_dirpath)
     return nil
 end
 
-function timing(section)
-  if start_time == nil then
-    return
-  end
-  print(section .. ': ' .. (os.clock() - start_time)*1000 .. 'ms')
-  start_time = os.clock()
-end
-
 -- Update Rich Presence for the provided vim buffer
 function Presence:update_for_buffer(buffer, should_debounce)
-
-    if start_time ~= nil then
-      start_time = os.clock()
-    end
 
     -- Avoid unnecessary updates if the previous activity was for the current buffer
     -- (allow same-buffer updates when line numbers are enabled)
@@ -802,15 +790,11 @@ function Presence:update_for_buffer(buffer, should_debounce)
         return
     end
 
-    timing('A')
-
     -- Parse vim buffer
     local filename = self.get_filename(buffer, self.os.path_separator)
     local parent_dirpath = self.get_dir_path(buffer, self.os.path_separator)
     local extension = filename and self.get_file_extension(filename) or nil
     self.log:debug(string.format("Parsed filename %s with %s extension", filename, extension or "no"))
-
-    timing('B')
 
     -- Return early if there is no valid activity status text to set
     local status_text = self:get_status_text(filename)
@@ -818,13 +802,9 @@ function Presence:update_for_buffer(buffer, should_debounce)
         return self.log:debug("No status text for the given buffer, skipping...")
     end
 
-    timing('C')
-
     -- Get project information
     self.log:debug(string.format("Getting project name for %s...", parent_dirpath))
     local project_name, project_path = self:get_project_name(parent_dirpath)
-
-    timing('D')
 
     -- Check for blacklist
     local is_blacklisted = #self.options.blacklist > 0 and self:check_blacklist(buffer, parent_dirpath, project_path)
@@ -835,8 +815,6 @@ function Presence:update_for_buffer(buffer, should_debounce)
         return
     end
 
-    timing('E')
-
     local activity_set_at = os.time()
     -- If we shouldn't debounce and we trigger an activity, keep this value the same.
     -- Otherwise set it to the current time.
@@ -844,8 +822,9 @@ function Presence:update_for_buffer(buffer, should_debounce)
 
     self.log:debug(string.format("Setting activity for %s...", buffer and #buffer > 0 and buffer or "unnamed buffer"))
 
-    timing('F')
-
+    if start_time ~= nil then
+      start_time = os.clock()
+    end
     -- Determine image text and asset key
     local name = filename
     local asset_key = "code"
@@ -855,8 +834,6 @@ function Presence:update_for_buffer(buffer, should_debounce)
         name, asset_key, description = unpack(file_asset)
         self.log:debug(string.format("Using file asset: %s", vim.inspect(file_asset)))
     end
-
-    timing('G')
 
     -- Construct activity asset information
     local file_text = description or name
@@ -886,8 +863,6 @@ function Presence:update_for_buffer(buffer, should_debounce)
         end
     end
 
-
-    timing('H')
 
     -- Get the current line number and line count if the user has set the enable_line_number option
     if self.options.enable_line_number == 1 then
@@ -962,7 +937,6 @@ function Presence:update_for_buffer(buffer, should_debounce)
         end
     end
 
-    timing('I')
     -- Sync activity to all peers
     self.log:debug("Sync activity to all peers...")
     self:sync_self_activity()
