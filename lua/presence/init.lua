@@ -423,20 +423,28 @@ function Presence:get_project_name(file_path)
     -- TODO: Only checks for a git repository, could add more checks here
     -- Might want to run this in a background process depending on performance
     local project_path_cmd = "git rev-parse --show-toplevel"
-    project_path_cmd = file_path
-        and string.format([[cd "%s" && %s]], file_path, project_path_cmd)
-        or project_path_cmd
 
-    local project_path = vim.fn.system(project_path_cmd)
+    -- TODO: Execute under the directory of the file_path
+    local handler = io.popen(project_path_cmd)
+
+    if handler == nil then
+        local message_fmt = "Failed to get project name (error code %d): %s"
+        self.log:error(string.format(message_fmt, vim.v.shell_error))
+        return nil
+    end
+
+    local project_path = handler:read("*a")
+    handler:close()
     project_path = vim.trim(project_path)
+
 
     if project_path:find("fatal.*") then
         self.log:info("Not a git repository, skipping...")
         return nil
     end
-    if vim.v.shell_error ~= 0 or #project_path == 0 then
-        local message_fmt = "Failed to get project name (error code %d): %s"
-        self.log:error(string.format(message_fmt, vim.v.shell_error, project_path))
+    if #project_path == 0 then
+        local message_fmt = "Failed to get project name: %s"
+        self.log:error(string.format(message_fmt, project_path))
         return nil
     end
 
@@ -708,12 +716,18 @@ function Presence:get_buttons(buffer, parent_dirpath)
         -- Escape quotes in the file path
         local path = parent_dirpath:gsub([["]], [[\"]])
         local git_url_cmd = "git config --get remote.origin.url"
-        local cmd = path
-            and string.format([[cd "%s" && %s]], path, git_url_cmd)
-            or git_url_cmd
+
+        -- TODO: Execute under the directory of the file_path
+        local handler = io.popen(git_url_cmd)
+
+        if handler == nil then
+            self.log:error("Unable to get git repository URL. (io.popen failed))")
+            return
+        end
+        local result = handler:read("*a")
 
         -- Trim and coerce empty string value to null
-        repo_url = vim.trim(vim.fn.system(cmd))
+        repo_url = vim.trim(result)
         repo_url = repo_url ~= "" and repo_url or nil
     end
 
@@ -768,6 +782,7 @@ end
 
 -- Update Rich Presence for the provided vim buffer
 function Presence:update_for_buffer(buffer, should_debounce)
+
     -- Avoid unnecessary updates if the previous activity was for the current buffer
     -- (allow same-buffer updates when line numbers are enabled)
     if self.options.enable_line_number == 0 and self.last_activity.file == buffer then
@@ -844,6 +859,7 @@ function Presence:update_for_buffer(buffer, should_debounce)
             activity.buttons = buttons
         end
     end
+
 
     -- Get the current line number and line count if the user has set the enable_line_number option
     if self.options.enable_line_number == 1 then
