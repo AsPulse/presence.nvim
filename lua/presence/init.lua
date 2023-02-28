@@ -411,19 +411,10 @@ function Presence.get_current_buffer()
     return vim.api.nvim_buf_get_name(current_buffer)
 end
 
-local cache_of_project_name = {}
-
 -- Gets the current project name
 function Presence:get_project_name(file_path)
     if not file_path then
         return nil
-    end
-
-    if cache_of_project_name[file_path] ~= nil then
-        if cache_of_project_name[file_path] == false then
-            return nil
-        end
-        return cache_of_project_name[file_path]
     end
 
     -- Escape quotes in the file path
@@ -440,12 +431,10 @@ function Presence:get_project_name(file_path)
     project_path = vim.trim(project_path)
 
     if project_path:find("fatal.*") then
-        cache_of_project_name[file_path] = false
         self.log:info("Not a git repository, skipping...")
         return nil
     end
     if vim.v.shell_error ~= 0 or #project_path == 0 then
-        cache_of_project_name[file_path] = false
         local message_fmt = "Failed to get project name (error code %d): %s"
         self.log:error(string.format(message_fmt, vim.v.shell_error, project_path))
         return nil
@@ -456,9 +445,7 @@ function Presence:get_project_name(file_path)
         project_path = project_path:gsub("/", [[\]])
     end
 
-    local result = { self.get_filename(project_path, self.os.path_separator), project_path }
-    cache_of_project_name[file_path] = result
-    return result
+    return self.get_filename(project_path, self.os.path_separator), project_path
 end
 
 -- Get the name of the parent directory for the given path
