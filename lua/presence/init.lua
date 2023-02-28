@@ -822,9 +822,6 @@ function Presence:update_for_buffer(buffer, should_debounce)
 
     self.log:debug(string.format("Setting activity for %s...", buffer and #buffer > 0 and buffer or "unnamed buffer"))
 
-    if start_time ~= nil then
-      start_time = os.clock()
-    end
     -- Determine image text and asset key
     local name = filename
     local asset_key = "code"
@@ -1242,8 +1239,6 @@ end
 -- BufEnter events force-update the presence for the current buffer unless it's a quickfix window
 function Presence:handle_buf_enter()
     self.log:debug("Handling BufEnter event...")
-    start_time = os.clock()
-    print('Handling BufEnter event…')
 
     if vim.bo.filetype == "qf" then
         self.log:debug("Skipping presence update for quickfix window...")
