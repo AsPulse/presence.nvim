@@ -419,12 +419,11 @@ function Presence:get_project_name(file_path)
         return nil
     end
 
-    local cached = cache_of_project_name[file_path]
-    if cached ~= nil then
-        if cached == false then
+    if cache_of_project_name[file_path] ~= nil then
+        if cache_of_project_name[file_path] == false then
             return nil
         end
-        return cached[0], cached[1]
+        return cache_of_project_name[file_path]
     end
 
     -- Escape quotes in the file path
@@ -459,7 +458,7 @@ function Presence:get_project_name(file_path)
 
     local result = { self.get_filename(project_path, self.os.path_separator), project_path }
     cache_of_project_name[file_path] = result
-    return result[0], result[1]
+    return result
 end
 
 -- Get the name of the parent directory for the given path
