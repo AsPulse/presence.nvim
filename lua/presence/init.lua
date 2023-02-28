@@ -716,12 +716,18 @@ function Presence:get_buttons(buffer, parent_dirpath)
         -- Escape quotes in the file path
         local path = parent_dirpath:gsub([["]], [[\"]])
         local git_url_cmd = "git config --get remote.origin.url"
-        local cmd = path
-            and string.format([[cd "%s" && %s]], path, git_url_cmd)
-            or git_url_cmd
+
+        -- TODO: Execute under the directory of the file_path
+        local handler = io.popen(git_url_cmd)
+
+        if handler == nil then
+            self.log:error("Unable to get git repository URL. (io.popen failed))")
+            return
+        end
+        local result = handler:read("*a")
 
         -- Trim and coerce empty string value to null
-        repo_url = vim.trim(vim.fn.system(cmd))
+        repo_url = vim.trim(result)
         repo_url = repo_url ~= "" and repo_url or nil
     end
 
