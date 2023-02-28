@@ -77,6 +77,10 @@ function Discord:call(opcode, payload, on_response)
                 on_response(err_message)
             else
                 self.log:debug("Wrote message to pipe")
+                if start_time ~= nil then
+                  print('Handling BufEnter event took ' .. (os.clock() - start_time) * 1000 .. ' ms')
+                  start_time = nil
+                end
             end
         end)
     end)
