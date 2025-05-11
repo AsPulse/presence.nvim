@@ -420,28 +420,27 @@ function Presence:get_project_name(file_path)
     -- Escape quotes in the file path
     file_path = file_path:gsub([["]], [[\"]])
 
-    -- TODO: Only checks for a git repository, could add more checks here
-    -- Might want to run this in a background process depending on performance
-    local project_path_cmd = "git rev-parse --show-toplevel"
+    local dir = vim.fn.fnamemodify(file_path, ":p:h")
+    local result = vim.fn.systemlist({
+        "git",
+        "-C",
+        dir,
+        "rev-parse",
+        "--show-toplevel",
+    })
 
-    -- TODO: Execute under the directory of the file_path
-    local handler = io.popen(project_path_cmd)
-
-    if handler == nil then
-        local message_fmt = "Failed to get project name (error code %d): %s"
-        self.log:error(string.format(message_fmt, vim.v.shell_error))
-        return nil
-    end
-
-    local project_path = handler:read("*a")
-    handler:close()
+    local project_path = result[1] or ""
     project_path = vim.trim(project_path)
 
-
-    if project_path:find("fatal.*") then
-        self.log:info("Not a git repository, skipping...")
+    if vim.v.shell_error ~= 0 then
+        if project_path:find("fatal.*") then
+          self.log:info("Not a git repository, skipping...")
+        else
+          self.log:error(string.format("Failed to get project name: %s", result[1]))
+        end
         return nil
     end
+
     if #project_path == 0 then
         local message_fmt = "Failed to get project name: %s"
         self.log:error(string.format(message_fmt, project_path))
